@@ -2,7 +2,7 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from src.rag.chunker import Document, chunk_document, chunk_documents, load_documents
+from rag.chunker import Document, chunk_document, chunk_documents, load_documents
 
 
 class ChunkerTests(unittest.TestCase):
