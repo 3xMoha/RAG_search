@@ -22,16 +22,21 @@ def rank_chunks(
     chunk_vectors: list[list[float]],
     query_vector: list[float],
     top_k: int = 3,
+    min_score: float | None = None,
 ) -> list[tuple[Chunk, float]]:
     """Return the chunks whose vectors are most similar to the query."""
     if len(chunks) != len(chunk_vectors):
         raise ValueError("every chunk must have one vector")
     if top_k <= 0:
         raise ValueError("top_k must be greater than zero")
+    if min_score is not None and not -1 <= min_score <= 1:
+        raise ValueError("min_score must be between -1 and 1")
 
     scored_chunks = [
         (chunk, cosine_similarity(vector, query_vector))
         for chunk, vector in zip(chunks, chunk_vectors)
     ]
+    if min_score is not None:
+        scored_chunks = [result for result in scored_chunks if result[1] >= min_score]
     scored_chunks.sort(key=lambda result: result[1], reverse=True)
     return scored_chunks[:top_k]

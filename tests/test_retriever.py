@@ -30,6 +30,25 @@ class RetrieverTests(unittest.TestCase):
                 query_vector=[1, 0],
             )
 
+    def test_rank_chunks_excludes_scores_below_threshold(self):
+        chunks = [
+            Chunk(source="notes.md", chunk_id=0, text="Relevant"),
+            Chunk(source="notes.md", chunk_id=1, text="Irrelevant"),
+        ]
+
+        results = rank_chunks(
+            chunks,
+            [[1, 0], [0, 1]],
+            query_vector=[1, 0],
+            min_score=0.5,
+        )
+
+        self.assertEqual(results, [(chunks[0], 1.0)])
+
+    def test_min_score_must_be_a_valid_cosine_score(self):
+        with self.assertRaises(ValueError):
+            rank_chunks([], [], query_vector=[1, 0], min_score=1.1)
+
 
 if __name__ == "__main__":
     unittest.main()

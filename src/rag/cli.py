@@ -40,14 +40,14 @@ def print_results(results) -> None:
         print()
 
 
-def interactive(index: SearchIndex, top_k: int) -> None:
+def interactive(index: SearchIndex, top_k: int, min_score: float) -> None:
     print("Interactive search. Press Esc to exit.")
     while True:
         query = read_query()
         if query is None:
             return
         if query:
-            print_results(index.search(query, top_k=top_k))
+            print_results(index.search(query, top_k=top_k, min_score=min_score))
 
 
 def main() -> None:
@@ -56,13 +56,14 @@ def main() -> None:
     parser.add_argument("--data", type=Path, default=Path("data"))
     parser.add_argument("--top-k", type=int, default=1)
     parser.add_argument("--max_chars", type=int, default=500)
+    parser.add_argument("--min-score", type=float, default=0.25)
     args = parser.parse_args()
 
     index = SearchIndex(args.data, max_chars=args.max_chars)
     if args.query:
-        print_results(index.search(args.query, top_k=args.top_k))
+        print_results(index.search(args.query, top_k=args.top_k, min_score=args.min_score))
     else:
-        interactive(index, top_k=args.top_k)
+        interactive(index, top_k=args.top_k, min_score=args.min_score)
 
 
 if __name__ == "__main__":

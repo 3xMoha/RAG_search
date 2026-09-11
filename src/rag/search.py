@@ -14,9 +14,15 @@ class SearchIndex:
         self.embedder = embedder or Embedder()
         self.chunk_vectors = self.embedder.embed_documents([chunk.text for chunk in self.chunks])
 
-    def search(self, query: str, top_k: int = 3):
+    def search(self, query: str, top_k: int = 3, min_score: float | None = None):
         query_vector = self.embedder.embed_query(query)
-        return rank_chunks(self.chunks, self.chunk_vectors, query_vector, top_k=top_k)
+        return rank_chunks(
+            self.chunks,
+            self.chunk_vectors,
+            query_vector,
+            top_k=top_k,
+            min_score=min_score,
+        )
 
 
 def search(
@@ -25,6 +31,11 @@ def search(
     embedder: Embedder | None = None,
     max_chars: int = 500,
     top_k: int = 3,
+    min_score: float | None = None,
 ):
     """Find the chunks most relevant to a query in a document directory."""
-    return SearchIndex(directory, embedder=embedder, max_chars=max_chars).search(query, top_k=top_k)
+    return SearchIndex(directory, embedder=embedder, max_chars=max_chars).search(
+        query,
+        top_k=top_k,
+        min_score=min_score,
+    )
