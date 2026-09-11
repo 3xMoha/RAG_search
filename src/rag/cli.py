@@ -1,20 +1,68 @@
 import argparse
+import sys
+import termios
+import tty
 from pathlib import Path
 
-from rag.search import search
+from rag.search import SearchIndex
+
+
+def read_query() -> str | None:
+    """Read one query, returning None when Escape is pressed."""
+    print("> ", end="", flush=True)
+    characters = []
+    settings = termios.tcgetattr(sys.stdin)
+    try:
+        tty.setraw(sys.stdin.fileno())
+        while True:
+            character = sys.stdin.read(1)
+            if character == "\x1b":
+                print()
+                return None
+            if character in {"\r", "\n"}:
+                print()
+                return "".join(characters).strip()
+            if character in {"\x7f", "\b"}:
+                if characters:
+                    characters.pop()
+                    print("\b \b", end="", flush=True)
+                continue
+            characters.append(character)
+            print(character, end="", flush=True)
+    finally:
+        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+
+
+def print_results(results) -> None:
+    for chunk, score in results:
+        print(f"[{score:.3f}] {chunk.source} (chunk {chunk.chunk_id})")
+        print(chunk.text)
+        print()
+
+
+def interactive(index: SearchIndex, top_k: int) -> None:
+    print("Interactive search. Press Esc to exit.")
+    while True:
+        query = read_query()
+        if query is None:
+            return
+        if query:
+            print_results(index.search(query, top_k=top_k))
 
 
 def main() -> None:
     parser = argparse.ArgumentParser(description="Search local documents with RAG retrieval.")
-    parser.add_argument("query")
+    parser.add_argument("query", nargs="?")
     parser.add_argument("--data", type=Path, default=Path("data"))
-    parser.add_argument("--top-k", type=int, default=3)
+    parser.add_argument("--top-k", type=int, default=1)
+    parser.add_argument("--max_chars", type=int, default=500)
     args = parser.parse_args()
 
-    for chunk, score in search(args.data, args.query, top_k=args.top_k):
-        print(f"[{score:.3f}] {chunk.source} (chunk {chunk.chunk_id})")
-        print(chunk.text)
-        print()
+    index = SearchIndex(args.data, max_chars=args.max_chars)
+    if args.query:
+        print_results(index.search(args.query, top_k=args.top_k))
+    else:
+        interactive(index, top_k=args.top_k)
 
 
 if __name__ == "__main__":

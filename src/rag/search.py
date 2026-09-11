@@ -5,6 +5,20 @@ from rag.embedder import Embedder
 from rag.retriever import rank_chunks
 
 
+class SearchIndex:
+    """Prepare document embeddings once and search them repeatedly."""
+
+    def __init__(self, directory: Path, embedder: Embedder | None = None, max_chars: int = 500):
+        documents = load_documents(directory)
+        self.chunks = chunk_documents(documents, max_chars=max_chars)
+        self.embedder = embedder or Embedder()
+        self.chunk_vectors = self.embedder.embed_documents([chunk.text for chunk in self.chunks])
+
+    def search(self, query: str, top_k: int = 3):
+        query_vector = self.embedder.embed_query(query)
+        return rank_chunks(self.chunks, self.chunk_vectors, query_vector, top_k=top_k)
+
+
 def search(
     directory: Path,
     query: str,
@@ -13,11 +27,4 @@ def search(
     top_k: int = 3,
 ):
     """Find the chunks most relevant to a query in a document directory."""
-    documents = load_documents(directory)
-    chunks = chunk_documents(documents, max_chars=max_chars)
-
-    embedder = embedder or Embedder()
-    chunk_vectors = embedder.embed_documents([chunk.text for chunk in chunks])
-    query_vector = embedder.embed_query(query)
-
-    return rank_chunks(chunks, chunk_vectors, query_vector, top_k=top_k)
+    return SearchIndex(directory, embedder=embedder, max_chars=max_chars).search(query, top_k=top_k)
