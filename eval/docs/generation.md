@@ -1,0 +1,1 @@
+Retrieval-augmented generation supplies retrieved passages alongside a question to a language model. The model generates an answer using that context. Source citations let readers check supporting documents. If the context lacks the answer, the model should say it does not know; this instruction cannot guarantee factual answers.

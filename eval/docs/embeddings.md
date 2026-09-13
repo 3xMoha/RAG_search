@@ -1,0 +1,1 @@
+Embeddings represent text as numerical vectors. A text embedding model places passages with similar meanings near each other. Documents and questions must use the same embedding model so their vectors can be compared. Stored vectors avoid embedding unchanged documents on every launch.

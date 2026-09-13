@@ -1,0 +1,1 @@
+Unit tests check individual functions with small, controlled inputs. Integration tests check components working together. A fake embedder makes tests fast and independent of model downloads. GitHub Actions can run tests automatically on pushes and pull requests.

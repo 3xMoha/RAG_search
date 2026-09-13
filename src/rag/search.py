@@ -9,8 +9,12 @@ class SearchIndex:
     """Prepare document embeddings once and search them repeatedly."""
 
     def __init__(self, directory: Path, embedder: Embedder | None = None, max_chars: int = 500):
+        if not directory.is_dir():
+            raise ValueError(f"Not a data directory: {directory}")
         documents = load_documents(directory)
         self.chunks = chunk_documents(documents, max_chars=max_chars)
+        if not self.chunks:
+            raise ValueError(f"No nonempty .md or .txt files in {directory}")
         self.embedder = embedder or Embedder()
         self.chunk_vectors = self.embedder.embed_documents([chunk.text for chunk in self.chunks])
 

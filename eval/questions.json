@@ -1,0 +1,14 @@
+[
+  {"question": "How are search results ranked?", "source": "retrieval.md"},
+  {"question": "Does a similarity score tell me the probability an answer is correct?", "source": "retrieval.md"},
+  {"question": "Why repeat text between adjacent passages?", "source": "chunking.md"},
+  {"question": "What can happen when a chunk exceeds the embedding model's input limit?", "source": "chunking.md"},
+  {"question": "How is text represented numerically for semantic search?", "source": "embeddings.md"},
+  {"question": "Why must documents and queries use the same model?", "source": "embeddings.md"},
+  {"question": "How does RAG produce an answer?", "source": "generation.md"},
+  {"question": "What should the language model do if the context cannot answer?", "source": "generation.md"},
+  {"question": "How can tests avoid downloading a model?", "source": "testing.md"},
+  {"question": "How can tests run automatically after a push?", "source": "testing.md"},
+  {"question": "What is the capital of Peru?", "source": null},
+  {"question": "How long should I boil an egg?", "source": null}
+]

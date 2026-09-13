@@ -1,0 +1,1 @@
+Retrieval finds relevant source passages for a question. Cosine similarity compares the directions of query and document embedding vectors. Top-k selects the k highest-scoring chunks. A minimum score filters weak matches, but similarity is not a probability that a passage answers the question.

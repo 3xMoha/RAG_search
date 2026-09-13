@@ -19,7 +19,7 @@ def load_documents(directory: Path) -> list[Document]:
     """Read Markdown and text files from a directory."""
     documents = []
     for path in sorted(directory.iterdir()):
-        if path.suffix.lower() not in {".md", ".txt"}:
+        if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
             continue
 
         text = path.read_text(encoding="utf-8").strip()

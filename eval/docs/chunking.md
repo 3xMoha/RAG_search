@@ -1,0 +1,1 @@
+Chunking splits documents into smaller passages before embedding. Paragraph boundaries preserve related sentences. Overlap repeats some text between adjacent chunks to preserve context across boundaries. Very large chunks may be truncated by the embedding model.
