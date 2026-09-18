@@ -63,6 +63,7 @@ def main() -> None:
     parser.add_argument("--top-k", type=int, default=1)
     parser.add_argument("--max_chars", type=int, default=500)
     parser.add_argument("--min-score", type=float, default=0.25)
+    parser.add_argument("--rebuild", action="store_true", help="Rebuild the saved document index")
     args = parser.parse_args()
 
     if args.top_k <= 0 or args.max_chars <= 0:
@@ -70,7 +71,10 @@ def main() -> None:
     if not -1 <= args.min_score <= 1:
         parser.error("--min-score must be between -1 and 1")
     try:
-        index = SearchIndex(args.data, max_chars=args.max_chars)
+        index = SearchIndex(
+            args.data, max_chars=args.max_chars,
+            index_path=args.data / ".rag-index.json", rebuild=args.rebuild,
+        )
         if args.query:
             print_results(index.search(args.query, top_k=args.top_k, min_score=args.min_score))
         else:
