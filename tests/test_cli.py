@@ -47,3 +47,15 @@ def test_missing_directory_cli(tmp_path, capsys):
             main()
     assert error.value.code == 1
     assert "Not a data directory" in capsys.readouterr().err
+
+
+def test_cli_rebuild_uses_data_directory(tmp_path):
+    with (
+        patch("sys.argv", ["rag-search", "question", "--data", str(tmp_path), "--rebuild"]),
+        patch("rag.cli.SearchIndex") as index,
+    ):
+        index.return_value.search.return_value = []
+        main()
+    index.assert_called_once_with(
+        tmp_path, max_chars=500, index_path=tmp_path / ".rag-index.json", rebuild=True,
+    )
