@@ -8,6 +8,23 @@ from rag.cli import main, print_results, read_query
 from rag.search import SearchIndex
 
 
+@pytest.mark.parametrize("interactive", [False, True])
+def test_answer_mode(interactive, capsys):
+    argv = ["rag-search", "--answer", "--model", "small"]
+    if not interactive:
+        argv.append("question")
+    with (
+        patch("sys.argv", argv),
+        patch("rag.cli.SearchIndex") as index,
+        patch("rag.cli.generate", return_value="Generated answer") as generate,
+        patch("rag.cli.read_query", side_effect=["question", None]),
+    ):
+        index.return_value.search.return_value = []
+        main()
+    generate.assert_called_once_with("question", [], model="small", url="http://localhost:11434")
+    assert "Generated answer" in capsys.readouterr().out
+
+
 @pytest.mark.parametrize("key", ["\x03", "\x04", "\x1b", ""])
 def test_exit_keys_restore_terminal(key):
     with (
