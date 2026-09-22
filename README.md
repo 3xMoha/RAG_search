@@ -19,6 +19,19 @@ Add `.md` or `.txt` files to `data/` and search them with:
 uv run rag-search "your question" --top-k 3
 ```
 
+For local answers, install [Ollama](https://ollama.com/download).
+Run `ollama serve` in another terminal if it isn't already running, then:
+
+```bash
+ollama pull qwen3.5:4b  # one-time download, about 3.4 GB
+uv run rag-search "What is RAG?" --answer --top-k 3
+```
+
+Omit the question for interactive answers. Switch models with `--model NAME`
+(download it first); change servers with `--ollama-url URL`.
+Generation uses a 4,096-token context; keep retrieved passages short.
+Answers include source labels but can still be wrong. Tests mock Ollama.
+
 Run tests with:
 
 ```bash

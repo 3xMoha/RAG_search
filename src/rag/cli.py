@@ -2,9 +2,11 @@ import argparse
 import sys
 import termios
 import tty
+from functools import partial
 from pathlib import Path
 
 from rag.search import SearchIndex
+from rag.generator import DEFAULT_MODEL, DEFAULT_URL, generate
 
 
 def read_query() -> str | None:
@@ -46,14 +48,18 @@ def print_results(results) -> None:
         print()
 
 
-def interactive(index: SearchIndex, top_k: int, min_score: float) -> None:
+def interactive(index: SearchIndex, top_k: int, min_score: float, answer=None) -> None:
     print("Interactive search. Press Esc to exit.")
     while True:
         query = read_query()
         if query is None:
             return
         if query:
-            print_results(index.search(query, top_k=top_k, min_score=min_score))
+            results = index.search(query, top_k=top_k, min_score=min_score)
+            if answer:
+                print(answer(query, results))
+            else:
+                print_results(results)
 
 
 def main() -> None:
@@ -64,6 +70,9 @@ def main() -> None:
     parser.add_argument("--max_chars", type=int, default=500)
     parser.add_argument("--min-score", type=float, default=0.25)
     parser.add_argument("--rebuild", action="store_true", help="Rebuild the saved document index")
+    parser.add_argument("--answer", action="store_true", help="Generate an answer with Ollama")
+    parser.add_argument("--model", default=DEFAULT_MODEL)
+    parser.add_argument("--ollama-url", default=DEFAULT_URL)
     args = parser.parse_args()
 
     if args.top_k <= 0 or args.max_chars <= 0:
@@ -71,14 +80,21 @@ def main() -> None:
     if not -1 <= args.min_score <= 1:
         parser.error("--min-score must be between -1 and 1")
     try:
+        answer = None
+        if args.answer:
+            answer = partial(generate, model=args.model, url=args.ollama_url)
         index = SearchIndex(
             args.data, max_chars=args.max_chars,
             index_path=args.data / ".rag-index.json", rebuild=args.rebuild,
         )
         if args.query:
-            print_results(index.search(args.query, top_k=args.top_k, min_score=args.min_score))
+            results = index.search(args.query, top_k=args.top_k, min_score=args.min_score)
+            if answer:
+                print(answer(args.query, results))
+            else:
+                print_results(results)
         else:
-            interactive(index, top_k=args.top_k, min_score=args.min_score)
+            interactive(index, top_k=args.top_k, min_score=args.min_score, answer=answer)
     except (OSError, ValueError) as error:
         parser.exit(1, f"Error: {error}\n")
     except (KeyboardInterrupt, EOFError):
