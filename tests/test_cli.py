@@ -1,6 +1,6 @@
 import io
 import termios
-from unittest.mock import patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -17,10 +17,22 @@ def test_answer_mode(interactive, capsys):
         patch("sys.argv", argv),
         patch("rag.cli.SearchIndex") as index,
         patch("rag.cli.generate", return_value="Generated answer") as generate,
-        patch("rag.cli.read_query", side_effect=["question", None]),
+        patch("rag.cli.interpret", return_value="corrected question") as interpret,
+        patch("rag.cli.warm_up") as warm_up,
+        patch("rag.cli.read_query", side_effect=["question", None]) as read,
     ):
+        events = Mock()
+        for name, mock in [("warm", warm_up), ("read", read), ("interpret", interpret),
+                           ("search", index.return_value.search), ("generate", generate)]:
+            events.attach_mock(mock, name)
         index.return_value.search.return_value = []
         main()
+    warm_up.assert_called_once_with(model="small", url="http://localhost:11434")
+    interpret.assert_called_once_with("question", model="small", url="http://localhost:11434")
+    index.return_value.search.assert_called_once_with("corrected question", top_k=1, min_score=0.25)
+    names = [event[0] for event in events.mock_calls]
+    assert names == (["warm", "read", "interpret", "search", "generate", "read"] if interactive
+                     else ["warm", "interpret", "search", "generate"])
     generate.assert_called_once_with("question", [], model="small", url="http://localhost:11434")
     assert "Generated answer" in capsys.readouterr().out
 
@@ -70,9 +82,13 @@ def test_cli_rebuild_uses_data_directory(tmp_path):
     with (
         patch("sys.argv", ["rag-search", "question", "--data", str(tmp_path), "--rebuild"]),
         patch("rag.cli.SearchIndex") as index,
+        patch("rag.cli.warm_up") as warm_up,
+        patch("rag.cli.interpret") as interpret,
     ):
         index.return_value.search.return_value = []
         main()
+    warm_up.assert_not_called()
+    interpret.assert_not_called()
     index.assert_called_once_with(
         tmp_path, max_chars=500, index_path=tmp_path / ".rag-index.json", rebuild=True,
     )

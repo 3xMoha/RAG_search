@@ -6,7 +6,20 @@ from urllib.error import HTTPError, URLError
 import pytest
 
 from rag.chunker import Chunk
-from rag.generator import generate, request_answer
+from rag.generator import generate, interpret, request_answer, warm_up
+
+
+def test_warm_up_requests_a_short_response():
+    with patch("rag.generator.request_answer", return_value="OK") as request:
+        warm_up("small", "http://server")
+    request.assert_called_once_with("Reply with OK.", "small", "http://server", system="Reply briefly.")
+
+
+def test_interpret_uses_rewrite_instructions():
+    with patch("rag.generator.request_answer", return_value="Why do chunks overlap?") as request:
+        assert interpret("why do chucks overlap?") == "Why do chunks overlap?"
+    assert request.call_args.args[0] == "why do chucks overlap?"
+    assert "Do not answer" in request.call_args.kwargs["system"]
 
 
 def test_empty_results_skip_model():
