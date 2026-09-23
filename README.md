@@ -30,6 +30,8 @@ uv run rag-search "What is RAG?" --answer --top-k 3
 Omit the question for interactive answers. Switch models with `--model NAME`
 (download it first); change servers with `--ollama-url URL`.
 Generation uses a 4,096-token context; keep retrieved passages short.
+Answer mode warms up the LLM before input, then rewrites every question for retrieval.
+Changed queries are shown; answers use the original question and retrieved context.
 Answers include source labels but can still be wrong. Tests mock Ollama.
 
 Run tests with:

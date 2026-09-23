@@ -6,7 +6,7 @@ from functools import partial
 from pathlib import Path
 
 from rag.search import SearchIndex
-from rag.generator import DEFAULT_MODEL, DEFAULT_URL, generate
+from rag.generator import DEFAULT_MODEL, DEFAULT_URL, generate, interpret, warm_up
 
 
 def read_query() -> str | None:
@@ -48,18 +48,25 @@ def print_results(results) -> None:
         print()
 
 
-def interactive(index: SearchIndex, top_k: int, min_score: float, answer=None) -> None:
+def respond(query, index, top_k, min_score, answer=None, rewrite=None) -> None:
+    search_query = rewrite(query) if rewrite else query
+    if search_query != query:
+        print(f"Searching: {search_query}", flush=True)
+    results = index.search(search_query, top_k=top_k, min_score=min_score)
+    if answer:
+        print(answer(query, results))
+    else:
+        print_results(results)
+
+
+def interactive(index: SearchIndex, top_k: int, min_score: float, answer=None, rewrite=None) -> None:
     print("Interactive search. Press Esc to exit.")
     while True:
         query = read_query()
         if query is None:
             return
         if query:
-            results = index.search(query, top_k=top_k, min_score=min_score)
-            if answer:
-                print(answer(query, results))
-            else:
-                print_results(results)
+            respond(query, index, top_k, min_score, answer, rewrite)
 
 
 def main() -> None:
@@ -81,20 +88,21 @@ def main() -> None:
         parser.error("--min-score must be between -1 and 1")
     try:
         answer = None
+        rewrite = None
         if args.answer:
             answer = partial(generate, model=args.model, url=args.ollama_url)
+            rewrite = partial(interpret, model=args.model, url=args.ollama_url)
         index = SearchIndex(
             args.data, max_chars=args.max_chars,
             index_path=args.data / ".rag-index.json", rebuild=args.rebuild,
         )
+        if args.answer:
+            print("Warming up the LLM...", flush=True)
+            warm_up(model=args.model, url=args.ollama_url)
         if args.query:
-            results = index.search(args.query, top_k=args.top_k, min_score=args.min_score)
-            if answer:
-                print(answer(args.query, results))
-            else:
-                print_results(results)
+            respond(args.query, index, args.top_k, args.min_score, answer, rewrite)
         else:
-            interactive(index, top_k=args.top_k, min_score=args.min_score, answer=answer)
+            interactive(index, args.top_k, args.min_score, answer, rewrite)
     except (OSError, ValueError) as error:
         parser.exit(1, f"Error: {error}\n")
     except (KeyboardInterrupt, EOFError):

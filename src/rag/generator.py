@@ -11,10 +11,10 @@ SYSTEM = (
 )
 
 
-def request_answer(prompt: str, model: str, url: str) -> str:
+def request_answer(prompt: str, model: str, url: str, *, system: str = SYSTEM) -> str:
     """Keep the provider-specific request here."""
     payload = {
-        "model": model, "system": SYSTEM, "prompt": prompt,
+        "model": model, "system": system, "prompt": prompt,
         "stream": False, "think": False,
         "options": {"num_ctx": 4096, "num_predict": 512, "temperature": 0},
     }
@@ -35,6 +35,18 @@ def request_answer(prompt: str, model: str, url: str) -> str:
     if not answer:
         raise ValueError("Ollama returned an empty answer")
     return answer
+
+
+def warm_up(model: str = DEFAULT_MODEL, url: str = DEFAULT_URL) -> None:
+    request_answer("Reply with OK.", model, url, system="Reply briefly.")
+
+
+def interpret(question: str, model: str = DEFAULT_MODEL, url: str = DEFAULT_URL) -> str:
+    return request_answer(question, model, url, system=(
+        "Rewrite the user's question for document search. Correct spelling and grammar, "
+        "preserving its meaning, names, and technical terms. Do not answer it or add facts. "
+        "Return only the corrected question; leave clear questions unchanged."
+    ))
 
 
 def generate(question: str, results, model: str = DEFAULT_MODEL, url: str = DEFAULT_URL) -> str:
