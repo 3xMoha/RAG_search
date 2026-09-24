@@ -1,41 +1,36 @@
 import argparse
 import sys
-import termios
-import tty
 from functools import partial
 from pathlib import Path
+
+from prompt_toolkit import PromptSession
+from prompt_toolkit.key_binding import KeyBindings
 
 from rag.search import SearchIndex
 from rag.generator import DEFAULT_MODEL, DEFAULT_URL, generate, interpret, warm_up
 
 
-def read_query() -> str | None:
-    """Read one query, returning None when Escape is pressed."""
-    if not sys.stdin.isatty():
+def prompt_session(**kwargs) -> PromptSession:
+    bindings = KeyBindings()
+
+    @bindings.add("escape")
+    @bindings.add("c-c")
+    def exit_prompt(event):
+        event.app.exit(result=None)
+
+    @bindings.add("c-d")
+    def ignore_ctrl_d(event):
+        pass
+
+    return PromptSession(key_bindings=bindings, **kwargs)
+
+
+def read_query(session=None) -> str | None:
+    if session is None:
         line = sys.stdin.readline()
         return line.strip() if line else None
-    print("> ", end="", flush=True)
-    characters = []
-    settings = termios.tcgetattr(sys.stdin)
-    try:
-        tty.setraw(sys.stdin.fileno())
-        while True:
-            character = sys.stdin.read(1)
-            if character in {"", "\x1b", "\x03", "\x04"}:
-                print()
-                return None
-            if character in {"\r", "\n"}:
-                print()
-                return "".join(characters).strip()
-            if character in {"\x7f", "\b"}:
-                if characters:
-                    characters.pop()
-                    print("\b \b", end="", flush=True)
-                continue
-            characters.append(character)
-            print(character, end="", flush=True)
-    finally:
-        termios.tcsetattr(sys.stdin, termios.TCSADRAIN, settings)
+    query = session.prompt("> ")
+    return query.strip() if query is not None else None
 
 
 def print_results(results) -> None:
@@ -60,9 +55,10 @@ def respond(query, index, top_k, min_score, answer=None, rewrite=None) -> None:
 
 
 def interactive(index: SearchIndex, top_k: int, min_score: float, answer=None, rewrite=None) -> None:
-    print("Interactive search. Press Esc to exit.")
+    print("Interactive search. Up/Down: history. Left/Right: cursor. Esc or Ctrl+C: exit.")
+    session = prompt_session() if sys.stdin.isatty() else None
     while True:
-        query = read_query()
+        query = read_query(session)
         if query is None:
             return
         if query:

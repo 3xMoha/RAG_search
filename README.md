@@ -43,7 +43,8 @@ uv run pytest
 
 GitHub Actions runs the tests on pushes and pull requests (downloads the embedding model).
 
-Omit the query for interactive search; Esc, Ctrl+C, or Ctrl+D exits.
+Omit the query for interactive search. Up/Down recall session history; Left/Right move the cursor.
+Esc or Ctrl+C exits; Ctrl+D is ignored.
 
 The CLI saves chunks, vectors, and settings in `data/.rag-index.json` (under `--data`).
 Later launches reuse it; the model still loads to embed questions.
