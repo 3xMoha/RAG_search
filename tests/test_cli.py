@@ -1,10 +1,12 @@
 import io
-import termios
 from unittest.mock import Mock, patch
 
 import pytest
 
-from rag.cli import main, print_results, read_query
+from prompt_toolkit.input import create_pipe_input
+from prompt_toolkit.output import DummyOutput
+
+from rag.cli import main, print_results, read_query, prompt_session
 from rag.search import SearchIndex
 
 
@@ -37,17 +39,31 @@ def test_answer_mode(interactive, capsys):
     assert "Generated answer" in capsys.readouterr().out
 
 
-@pytest.mark.parametrize("key", ["\x03", "\x04", "\x1b", ""])
-def test_exit_keys_restore_terminal(key):
-    with (
-        patch("rag.cli.sys.stdin") as stdin,
-        patch("rag.cli.termios.tcgetattr", return_value=[123]),
-        patch("rag.cli.tty.setraw"),
-        patch("rag.cli.termios.tcsetattr") as restore,
-    ):
-        stdin.read.return_value = key
-        assert read_query() is None
-        restore.assert_called_once_with(stdin, termios.TCSADRAIN, [123])
+@pytest.mark.parametrize("keys, expected", [
+    ("\x03", None),
+    ("\x1b", None),
+    ("\x04hello\r", "hello"),
+    ("ac\x1b[Db\r", "abc"),
+    ("abc\x1b[D\x1b[DX\x1b[CY\r", "aXbYc"),
+    ("abc\x1b[D\x7f\r", "ac"),
+])
+def test_prompt_keys(keys, expected):
+    with create_pipe_input() as pipe:
+        session = prompt_session(input=pipe, output=DummyOutput())
+        pipe.send_text(keys)
+        assert read_query(session) == expected
+
+
+def test_prompt_history():
+    with create_pipe_input() as pipe:
+        session = prompt_session(input=pipe, output=DummyOutput())
+        for question in ("first", "second"):
+            pipe.send_text(question + "\r")
+            assert read_query(session) == question
+        pipe.send_text("\x1b[A\x1b[A\x1b[B\r")
+        assert read_query(session) == "second"
+        pipe.send_text("draft\x1b[A\x1b[B\r")
+        assert read_query(session) == "draft"
 
 
 def test_piped_input():
