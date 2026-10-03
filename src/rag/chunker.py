@@ -1,5 +1,9 @@
 from dataclasses import dataclass
 from pathlib import Path
+from textwrap import wrap
+
+from pypdf import PdfReader
+from pypdf.errors import PyPdfError
 
 
 @dataclass(frozen=True)
@@ -16,10 +20,15 @@ class Chunk:
 
 
 def load_documents(directory: Path) -> list[Document]:
-    """Read Markdown and text files from a directory."""
+    """Read text files and PDF pages, retaining source references."""
     documents = []
     for path in sorted(directory.iterdir()):
-        if not path.is_file() or path.suffix.lower() not in {".md", ".txt"}:
+        if not path.is_file():
+            continue
+        if path.suffix.lower() == ".pdf":
+            documents.extend(load_pdf(path))
+            continue
+        if path.suffix.lower() not in {".md", ".txt"}:
             continue
 
         text = path.read_text(encoding="utf-8").strip()
@@ -29,13 +38,35 @@ def load_documents(directory: Path) -> list[Document]:
     return documents
 
 
+def load_pdf(path: Path) -> list[Document]:
+    documents = []
+    try:
+        with path.open("rb") as stream:
+            reader = PdfReader(stream)
+            if reader.is_encrypted:
+                raise ValueError(f"Encrypted PDF is not supported: {path.name}")
+            for number, page in enumerate(reader.pages, 1):
+                text = (page.extract_text() or "").strip()
+                if text:
+                    documents.append(Document(f"{path.name}, page {number}", text))
+    except PyPdfError as error:
+        raise ValueError(f"Cannot read PDF {path.name}: {error}") from error
+    if not documents:
+        raise ValueError(f"No extractable text in {path.name}; scanned PDFs need OCR")
+    return documents
+
+
 def chunk_document(document: Document, max_chars: int = 500) -> list[Chunk]:
-    """Group paragraphs into chunks without splitting a paragraph."""
+    """Group paragraphs, splitting oversized ones to respect max_chars."""
     if max_chars <= 0:
         raise ValueError("max_chars must be greater than zero")
 
     paragraphs = [paragraph.strip() for paragraph in document.text.split("\n\n")]
     paragraphs = [paragraph for paragraph in paragraphs if paragraph]
+    paragraphs = [
+        part for paragraph in paragraphs
+        for part in (wrap(paragraph, width=max_chars) if len(paragraph) > max_chars else [paragraph])
+    ]
     chunks = []
     current_paragraphs = []
     current_length = 0

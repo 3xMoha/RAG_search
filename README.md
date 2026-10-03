@@ -13,10 +13,19 @@ uv sync
 uv run rag-search "What is RAG?"
 ```
 
-Add `.md` or `.txt` files to `data/` and search them with:
+Add `.md`, `.txt`, or `.pdf` files to `data/` and search them with:
 
 ```bash
 uv run rag-search "your question" --top-k 3
+```
+
+PDFs must contain selectable text (no OCR or encrypted files). Sources include
+PDF page numbers, which may differ from printed page numbers. Complex layouts
+may extract imperfectly. Long paragraphs are split to fit `--max_chars`.
+Rebuild existing indexes after this update or adding a book:
+
+```bash
+uv run rag-search --rebuild --answer --top-k 3
 ```
 
 For local answers, install [Ollama](https://ollama.com/download).

@@ -19,7 +19,7 @@ class SearchIndex:
         if max_chars <= 0:
             raise ValueError("max_chars must be greater than zero")
         settings = {
-            "version": 1,
+            "version": 2,
             "directory": str(directory.resolve()),
             "model": embedder.model_name if embedder is not None else DEFAULT_MODEL,
             "max_chars": max_chars,
@@ -31,7 +31,7 @@ class SearchIndex:
         documents = load_documents(directory)
         self.chunks = chunk_documents(documents, max_chars=max_chars)
         if not self.chunks:
-            raise ValueError(f"No nonempty .md or .txt files in {directory}")
+            raise ValueError(f"No nonempty .md, .txt, or .pdf files in {directory}")
         self.embedder = embedder or Embedder()
         self.chunk_vectors = self.embedder.embed_documents([chunk.text for chunk in self.chunks])
         if index_path is not None:
