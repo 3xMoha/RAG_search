@@ -1,7 +1,11 @@
 from dataclasses import dataclass
 from pathlib import Path
 from textwrap import wrap
+from zipfile import BadZipFile
 
+from bs4 import BeautifulSoup
+from ebooklib import epub
+from lxml.etree import LxmlError
 from pypdf import PdfReader
 from pypdf.errors import PyPdfError
 
@@ -20,13 +24,16 @@ class Chunk:
 
 
 def load_documents(directory: Path) -> list[Document]:
-    """Read text files and PDF pages, retaining source references."""
+    """Read text files, PDF pages, and EPUB chapters with source references."""
     documents = []
     for path in sorted(directory.iterdir()):
         if not path.is_file():
             continue
         if path.suffix.lower() == ".pdf":
             documents.extend(load_pdf(path))
+            continue
+        if path.suffix.lower() == ".epub":
+            documents.extend(load_epub(path))
             continue
         if path.suffix.lower() not in {".md", ".txt"}:
             continue
@@ -35,6 +42,33 @@ def load_documents(directory: Path) -> list[Document]:
         if text:
             documents.append(Document(source=path.name, text=text))
 
+    return documents
+
+
+def load_epub(path: Path) -> list[Document]:
+    """Read chapters in spine order, using headings and paths as references."""
+    documents = []
+    try:
+        book = epub.read_epub(str(path))
+        for item_id, _ in book.spine:
+            item = book.get_item_with_id(item_id)
+            if not isinstance(item, epub.EpubHtml) or isinstance(item, epub.EpubNav):
+                continue
+            soup = BeautifulSoup(item.get_body_content(), "html.parser")
+            for tag in soup(["script", "style", "nav"]):
+                tag.decompose()
+            heading = soup.find(["h1", "h2", "h3"])
+            title = heading.get_text(" ", strip=True) if heading else item.get_name()
+            for tag in soup.find_all(["p", "div", "li", "h1", "h2", "h3", "h4", "br"]):
+                tag.insert_before("\n\n")
+            text = soup.get_text().strip()
+            if text:
+                source = f"{path.name}, {title} ({item.get_name()})"
+                documents.append(Document(source, text))
+    except (epub.EpubException, BadZipFile, LxmlError, KeyError) as error:
+        raise ValueError(f"Cannot read EPUB {path.name}: {error}") from error
+    if not documents:
+        raise ValueError(f"No extractable text in EPUB {path.name}; DRM and image-only books are unsupported")
     return documents
 
 

@@ -13,7 +13,7 @@ uv sync
 uv run rag-search "What is RAG?"
 ```
 
-Add `.md`, `.txt`, or `.pdf` files to `data/` and search them with:
+Add `.md`, `.txt`, `.pdf`, or `.epub` files to `data/` and search them with:
 
 ```bash
 uv run rag-search "your question" --top-k 3
@@ -22,6 +22,8 @@ uv run rag-search "your question" --top-k 3
 PDFs must contain selectable text (no OCR or encrypted files). Sources include
 PDF page numbers, which may differ from printed page numbers. Complex layouts
 may extract imperfectly. Long paragraphs are split to fit `--max_chars`.
+EPUBs use chapter headings and internal file paths as references; DRM is unsupported.
+Use one format per book to avoid duplicate results.
 Rebuild existing indexes after this update or adding a book:
 
 ```bash

@@ -31,7 +31,7 @@ class SearchIndex:
         documents = load_documents(directory)
         self.chunks = chunk_documents(documents, max_chars=max_chars)
         if not self.chunks:
-            raise ValueError(f"No nonempty .md, .txt, or .pdf files in {directory}")
+            raise ValueError(f"No nonempty .md, .txt, .pdf, or .epub files in {directory}")
         self.embedder = embedder or Embedder()
         self.chunk_vectors = self.embedder.embed_documents([chunk.text for chunk in self.chunks])
         if index_path is not None:
